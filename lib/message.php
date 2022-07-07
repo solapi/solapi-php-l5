@@ -283,14 +283,15 @@ function send_one_message($to, $from, $text, $subject = null, $imageId = null)
     return send_one_message_params($params);
 }
 
-function send_messages($messages)
+function send_messages($messages, $allowDuplicates = false)
 {
     $params = array(
         "agent" => array(
             "sdkVersion" => $GLOBALS['defaultSdkVersion'],
             "osPlatform" => $GLOBALS['defaultOsPlatform']
         ),
-        "messages" => $messages
+        "messages" => $messages,
+        "allowDuplicates" => $allowDuplicates
     );
     return request("POST", "/messages/v4/send-many", $params);
 }

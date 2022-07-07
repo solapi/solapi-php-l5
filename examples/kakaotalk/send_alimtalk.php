@@ -65,3 +65,6 @@ $messages = array(
     // 계속해서 1만건 추가 가능.
 );
 print_r(send_messages($messages));
+
+// 중복 수신번호를 허용하실 경우 아래와 같이 실행하시면 됩니다.
+// print_r(send_messages($messages, true));
