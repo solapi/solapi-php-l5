@@ -3,7 +3,7 @@ require_once(__DIR__ . "/../config.php");
 $config = get_config();
 
 // TODO: PHP SDK version up 되는 경우 해당 값 변경해야 함
-$defaultSdkVersion = 'php/4.0.1';
+$defaultSdkVersion = 'php/4.0.2';
 $defaultOsPlatform = PHP_OS . ' | ' . phpversion();
 
 function get_header()
@@ -16,6 +16,45 @@ function get_header()
     $salt = uniqid();
     $signature = hash_hmac('sha256', $date . $salt, $apiSecret);
     return "Authorization: HMAC-SHA256 apiKey={$apiKey}, date={$date}, salt={$salt}, signature={$signature}";
+}
+
+function getExactMicroTime()
+{
+    return array_sum(explode(' ', microtime()));
+}
+
+function debug_request($method, $resource, $data, $headers = null)
+{
+    global $config;
+    $url = "{$config['protocol']}://{$config['domain']}";
+    if ($config['prefix']) $url .= $config['prefix'];
+    $url .= $resource;
+
+    date_default_timezone_set('Asia/Seoul');
+
+    $startTime = getExactMicroTime();
+    $formattedStartTime = date("Y-m-d H:i:s", $startTime);
+
+    error_log($url, 3, "./solapi.log.php");
+
+    error_log("\n\n----- REQUEST PARAMETER: ${formattedStartTime} -----\n", 3, "./solapi.log.php");
+    error_log(json_encode($data), 3, "./solapi.log.php");
+    error_log("\n", 3, "./solapi.log.php");
+
+    $result = request($method, $resource, $data, $headers);
+
+    $endTime = getExactMicroTime();
+    $formattedEndTime = date("Y-m-d H:i:s", $endTime);
+
+    error_log("\n----- HTTP RESPONSE: ${formattedEndTime} -----\n", 3, "./solapi.log.php");
+    error_log(json_encode($result), 3, "./solapi.log.php");
+
+    error_log("\n", 3, "./solapi.log.php");
+
+    $duration = $endTime - $startTime;
+    error_log("\n----- Duration(Seconds): ${duration} -----\n\n", 3, "./solapi.log.php");
+
+    return $result;
 }
 
 function request($method, $resource, $data = false, $headers = null)
@@ -37,11 +76,13 @@ function request($method, $resource, $data = false, $headers = null)
             default: // GET
                 if ($data) $url = sprintf("%s?%s", $url, http_build_query($data));
         }
-        $http_headers = array(get_header(), "Content-Type: application/json");
+        $http_headers = array(get_header(), "Content-Type: application/json", "X-Solapi-Debug: true");
         if (is_array($headers)) $http_headers = array_merge($http_headers, $headers);
         curl_setopt($curl, CURLOPT_HTTPHEADER, $http_headers);
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($curl, CURLOPT_SSLVERSION, 3);
         if (curl_error($curl)) {
             print curl_error($curl);
         }
@@ -49,7 +90,8 @@ function request($method, $resource, $data = false, $headers = null)
         curl_close($curl);
         return json_decode($result);
     } catch (Exception $err) {
-        return $err;
+        print $err->getTraceAsString();
+        return $err->getMessage();
     }
 }
 
@@ -283,7 +325,7 @@ function send_one_message($to, $from, $text, $subject = null, $imageId = null)
     return send_one_message_params($params);
 }
 
-function send_messages($messages, $allowDuplicates = false)
+function send_messages($messages, $allowDuplicates = false, $debugMode = false)
 {
     $params = array(
         "agent" => array(
@@ -293,7 +335,12 @@ function send_messages($messages, $allowDuplicates = false)
         "messages" => $messages,
         "allowDuplicates" => $allowDuplicates
     );
-    return request("POST", "/messages/v4/send-many", $params);
+    if ($debugMode) {
+        return debug_request("POST", "/messages/v4/send-many", $params);
+    } else {
+        return request("POST", "/messages/v4/send-many", $params);
+    }
+
 }
 
 function add_messages($groupId, $messages)
