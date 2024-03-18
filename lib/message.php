@@ -325,7 +325,7 @@ function send_one_message($to, $from, $text, $subject = null, $imageId = null)
     return send_one_message_params($params);
 }
 
-function send_messages($messages, $allowDuplicates = false, $debugMode = false)
+function send_messages($messages, $allowDuplicates = false, $debugMode = false, $appId = null)
 {
     $params = array(
         "agent" => array(
@@ -335,6 +335,9 @@ function send_messages($messages, $allowDuplicates = false, $debugMode = false)
         "messages" => $messages,
         "allowDuplicates" => $allowDuplicates
     );
+    if ($appId) {
+      $params['agent']['appId'] = $appId;
+    }
     if ($debugMode) {
         return debug_request("POST", "/messages/v4/send-many", $params);
     } else {
