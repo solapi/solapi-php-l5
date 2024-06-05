@@ -82,7 +82,6 @@ function request($method, $resource, $data = false, $headers = null)
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($curl, CURLOPT_SSLVERSION, 3);
         if (curl_error($curl)) {
             print curl_error($curl);
         }
